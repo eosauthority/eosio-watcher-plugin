@@ -1,0 +1,33 @@
+{
+  "actions": [{
+    "tx_id": "0f739ccba098d7a556280c2797f7ec4d8a41250d643c9a6c2c5685f4544bc9a1",
+    "account": "eosio.token",
+    "name": "transfer",
+    "authorization": [{
+        "actor": "eosio",
+        "permission": "active"
+      }
+    ],
+    "action_data": {
+      "from": "eosio",
+      "to": "eosio.stake",
+      "quantity": "2100.0000 SYS",
+      "memo": "stake bandwidth"
+    }
+  },{
+    "tx_id": "0f739ccba098d7a556280c2797f7ec4d8a41250d643c9a6c2c5685f4544bc9a2",
+    "account": "eosio.token",
+    "name": "transfer",
+    "authorization": [{
+        "actor": "eosio",
+        "permission": "active"
+      }
+    ],
+    "action_data": {
+      "from": "eosio",
+      "to": "eosio.ramfee",
+      "quantity": "50.0000 SYS",
+      "memo": "ram fee"
+    }
+  }]
+}
