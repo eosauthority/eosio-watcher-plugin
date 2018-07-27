@@ -47,7 +47,12 @@ Enable this plugin using `--plugin` option to nodeos or in your config.ini. Use 
 plugin = eosio::watcher_plugin
 #Set account:action so eosauthority:spaceinvader or just eosauthority: for all actions on eosauthority
 watch = eosauthority:
-#http endpoint for each action seen on the chain. Multiple if you there are multiple actions in one block.
+#watch multiple if required 
+watch = b1:
+#watch multiple if required 
+watch = eosabc:forum
+#http endpoint for each action seen on the chain. JSON array if you there are multiple actions in one block.
+#see sample json example. All "watch" above will be sent to this URL and the URL can handle processing as required
 watch-receiver-url = http://127.0.0.1:8082/blockchain_action
 #Age limit in seconds for blocks to send notifications. No age limit if set to negative.
 #Used to prevent old actions from trigger HTTP request while on replay (seconds)
