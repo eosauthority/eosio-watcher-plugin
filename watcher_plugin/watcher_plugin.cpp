@@ -169,44 +169,46 @@ namespace eosio {
 
    void watcher_plugin::plugin_initialize(const variables_map& options) {
 
-      // TODO: remove plugin if url not specified?
-      EOS_ASSERT(options.count("watch-receiver-url") == 1, fc::invalid_arg_exception,
-                 "watch_plugin requires one watch-receiver-url to be specified!");
+      try {
+         EOS_ASSERT(options.count("watch-receiver-url") == 1, fc::invalid_arg_exception,
+                    "watch_plugin requires one watch-receiver-url to be specified!");
 
-      string url_str = options.at("watch-receiver-url").as<string>();
-      my->receiver_url = fc::url(url_str);
+         string url_str = options.at("watch-receiver-url").as<string>();
+         my->receiver_url = fc::url(url_str);
 
-      if( options.count("watch") ) {
-         auto fo = options.at("watch").as<vector<string>>();
-         for( auto& s : fo ) {
-            // TODO: Don't require ':' for watching whole accounts
-            std::vector<std::string> v;
-            boost::split(v, s, boost::is_any_of(":"));
-            EOS_ASSERT(v.size() == 2, fc::invalid_arg_exception, "Invalid value ${s} for --watch",
-                       ("s",s));
-            watcher_plugin_impl::filter_entry fe{ v[0], v[1] };
-            EOS_ASSERT(fe.receiver.value, fc::invalid_arg_exception, "Invalid value ${s} for "
-                                                                     "--watch", ("s",s));
-            my->filter_on.insert( fe );
+         if (options.count("watch")) {
+            auto fo = options.at("watch").as<vector<string>>();
+            for (auto& s : fo) {
+               // TODO: Don't require ':' for watching whole accounts
+               std::vector<std::string> v;
+               boost::split(v, s, boost::is_any_of(":"));
+               EOS_ASSERT(v.size() == 2, fc::invalid_arg_exception,
+                          "Invalid value ${s} for --watch",
+                          ("s", s));
+               watcher_plugin_impl::filter_entry fe{v[0], v[1]};
+               EOS_ASSERT(fe.receiver.value, fc::invalid_arg_exception, "Invalid value ${s} for "
+                                                                        "--watch", ("s", s));
+               my->filter_on.insert(fe);
+            }
          }
-      }
 
-      if( options.count("watch-age-limit") )
-         my->age_limit = options.at("watch-age-limit").as<int64_t>();
+         if (options.count("watch-age-limit"))
+            my->age_limit = options.at("watch-age-limit").as<int64_t>();
 
 
-      my->chain_plug = app().find_plugin<chain_plugin>();
-      auto& chain = my->chain_plug->chain();
-      my->accepted_block_conn.emplace(chain.accepted_block.connect(
-        [&](const block_state_ptr& b_state) {
-           my->on_accepted_block(b_state);
-        }));
+         my->chain_plug = app().find_plugin<chain_plugin>();
+         auto& chain = my->chain_plug->chain();
+         my->accepted_block_conn.emplace(chain.accepted_block.connect(
+            [&](const block_state_ptr& b_state) {
+               my->on_accepted_block(b_state);
+            }));
 
-      my->applied_tx_conn.emplace(chain.applied_transaction.connect(
-         [&](const transaction_trace_ptr& tt) {
-            my->on_applied_tx(tt);
-         }
-      ));
+         my->applied_tx_conn.emplace(chain.applied_transaction.connect(
+            [&](const transaction_trace_ptr& tt) {
+               my->on_applied_tx(tt);
+            }
+         ));
+      } FC_LOG_AND_RETHROW()
    }
 
    void watcher_plugin::plugin_startup() {
