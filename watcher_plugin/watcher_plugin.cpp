@@ -1,7 +1,7 @@
 /**
- *  @file 
- *  @copyright eosauthority - free to use and modify - see LICENSE.txt
- */
+*  @file
+*  @copyright eosauthority - free to use and modify - see LICENSE.txt
+*/
 #include <eosio/watcher_plugin/watcher_plugin.hpp>
 #include <eosio/watcher_plugin/http_async_client.hpp>
 #include <eosio/chain/controller.hpp>
@@ -34,8 +34,8 @@ namespace eosio {
 
       struct action_notif {
          action_notif(const action& act, transaction_id_type tx_id, const variant& action_data)
-            : tx_id(tx_id), account(act.account), name(act.name), authorization(act.authorization),
-              action_data(action_data) {}
+         : tx_id(tx_id), account(act.account), name(act.name), authorization(act.authorization),
+         action_data(action_data) {}
 
          transaction_id_type      tx_id;
          account_name             account;
@@ -74,34 +74,42 @@ namespace eosio {
 
       bool filter( const action_trace& act ) {
          if( filter_on.find({ act.receipt.receiver, act.act.name }) != filter_on.end() )
-            return true;
+         return true;
          else if ( filter_on.find({ act.receipt.receiver, 0 }) != filter_on.end() )
-            return true;
+         return true;
          return false;
       }
 
       fc::variant deserialize_action_data(action act) {
+         //~ ilog("deserialize_action_data - action:", ("u",act));  //~ happens on every block
          auto& chain = chain_plug->chain();
          auto serializer = chain.get_abi_serializer(act.account, max_deserialization_time);
          FC_ASSERT(serializer.valid() &&
-                   serializer->get_action_type(act.name) != action_name(),
-                   "Unable to get abi for account: ${acc}, action: ${a} Not sending notification.",
-                   ("acc", act.account)("a", act.name));
+         serializer->get_action_type(act.name) != action_name(),
+         "Unable to get abi for account: ${acc}, action: ${a} Not sending notification.",
+         ("acc", act.account)("a", act.name));
          return serializer->binary_to_variant(act.name.to_string(), act.data,
-                                              max_deserialization_time);
+         max_deserialization_time);
       }
 
       void on_action_trace( const action_trace& act, const transaction_id_type& tx_id ) {
-         if( filter( act ) )
+         //~ ilog("on_action_trace - tx id: ${u}", ("u",tx_id));
+         if( filter( act ) ) {
             action_queue.insert(std::make_pair(tx_id, act.act));
+            //~ ilog("Added to action_queue: ${u}", ("u",act.act));
+         }
 
          for( const auto& iline : act.inline_traces ) {
+            //~ ilog("Processing inline_trace: ${u}", ("u",iline));
             on_action_trace( iline, tx_id );
          }
       }
 
       void on_applied_tx(const transaction_trace_ptr& trace) {
+         //~ ilog("on_applied_tx - trace object: ${u}", ("u",trace));
          auto id = trace->id;
+         //~ ilog("trace->id: ${u}",("u",trace->id));
+         //~ ilog("action_queue.count(id): ${u}",("u",action_queue.count(id)));
          if( !action_queue.count(id) ) {
             for( auto& at : trace->action_traces ) {
                on_action_trace(at, id);
@@ -110,8 +118,12 @@ namespace eosio {
       }
 
       void build_message(message& msg, const transaction_id_type& tx_id) {
+         //~ ilog("inside build_message - transaction id: ${u}", ("u",tx_id));
          auto range = action_queue.equal_range(tx_id);
          for( auto& it = range.first; it != range.second; it++) {
+            //~ ilog("inside build_message for loop on iterator for action_queue range");
+            //~ ilog("iterator it->first: ${u}", ("u",it->first));
+            //~ ilog("iterator it->second: ${u}", ("u",it->second));
             auto act_data = deserialize_action_data(it->second);
             action_notif notif( it->second, tx_id, std::forward<fc::variant>(act_data) );
 
@@ -128,18 +140,43 @@ namespace eosio {
       }
 
       void on_accepted_block(const block_state_ptr& block_state) {
+         //~ ilog("on_accepted_block | block_state->block: ${u}", ("u",block_state->block));
+         //ilog("block_num: ${u}", ("u",block_state->block->block_num));
          fc::time_point btime = block_state->block->timestamp;
          if( age_limit == -1 || (fc::time_point::now() - btime < fc::seconds(age_limit)) ) {
             message msg;
+
+            //~ ilog("Looping over all trx objects in block_state->trxs");
             for( const auto& tx : block_state->trxs ) {
+               //~ ilog("===> block_state->trxs | id: ${u}", ("u",tx->id));
                auto tx_id = tx->id;
+               //~ ilog("action_queue.size: ${u}", ("u",action_queue.size()));
                if( action_queue.count(tx_id) ) {
                   build_message(msg, tx_id);
                }
             }
+            //~ ilog("Done processing block_state->trxs");
 
-            if( msg.actions.size() > 0 )
+            //~ Now process the inline transactions from the block
+            //~ ilog("Looping over all transaction objects in block_state->block->transactions");
+            for( const auto& trx : block_state->block->transactions ) {
+               if (trx.trx.contains<transaction_id_type>()) {
+                  //~ ilog("trx.trx: ${u}", ("u",trx.trx));
+                  //~ ilog("===> block_state->block->transactions->trx->trx->id: ${u}", ("u",trx.trx.get<transaction_id_type>()));
+                  auto tx_id = trx.trx.get<transaction_id_type>();
+                  //~ ilog("action_queue.size: ${u}", ("u",action_queue.size()));
+                  if( action_queue.count(tx_id) ) {
+                     build_message(msg, tx_id);
+                  }
+               }
+            }
+
+            //~ ilog("Done processing block_state->block->transactions");
+
+            if( msg.actions.size() > 0 ) {
+               //~ ilog("Sending message - msg.actions.size(): ${u}",("u",msg.actions.size()));
                send_message(msg);
+            }
          }
          // TODO: Leave unsent actions until they are expired or are included in future blocks?
          action_queue.clear();
@@ -155,15 +192,15 @@ namespace eosio {
 
    void watcher_plugin::set_program_options(options_description&, options_description& cfg) {
       cfg.add_options()
-            ("watch", bpo::value<vector<string>>()->composing(),
-             "Track actions which match account:action. In case action is not specified, "
-             "all actions of specified account are tracked.")
-            ("watch-receiver-url", bpo::value<string>(),
-               "URL where to send actions being tracked")
-            ("watch-age-limit",
-             bpo::value<int64_t>()->default_value(watcher_plugin_impl::default_age_limit),
-             "Age limit in seconds for blocks to send notifications about."
-             "No age limit if set to negative.");
+      ("watch", bpo::value<vector<string>>()->composing(),
+      "Track actions which match account:action. In case action is not specified, "
+      "all actions of specified account are tracked.")
+      ("watch-receiver-url", bpo::value<string>(),
+      "URL where to send actions being tracked")
+      ("watch-age-limit",
+      bpo::value<int64_t>()->default_value(watcher_plugin_impl::default_age_limit),
+      "Age limit in seconds for blocks to send notifications about."
+      "No age limit if set to negative.");
 
    }
 
@@ -171,7 +208,7 @@ namespace eosio {
 
       try {
          EOS_ASSERT(options.count("watch-receiver-url") == 1, fc::invalid_arg_exception,
-                    "watch_plugin requires one watch-receiver-url to be specified!");
+         "watch_plugin requires one watch-receiver-url to be specified!");
 
          string url_str = options.at("watch-receiver-url").as<string>();
          my->receiver_url = fc::url(url_str);
@@ -183,17 +220,17 @@ namespace eosio {
                std::vector<std::string> v;
                boost::split(v, s, boost::is_any_of(":"));
                EOS_ASSERT(v.size() == 2, fc::invalid_arg_exception,
-                          "Invalid value ${s} for --watch",
-                          ("s", s));
+               "Invalid value ${s} for --watch",
+               ("s", s));
                watcher_plugin_impl::filter_entry fe{v[0], v[1]};
                EOS_ASSERT(fe.receiver.value, fc::invalid_arg_exception, "Invalid value ${s} for "
-                                                                        "--watch", ("s", s));
+               "--watch", ("s", s));
                my->filter_on.insert(fe);
             }
          }
 
          if (options.count("watch-age-limit"))
-            my->age_limit = options.at("watch-age-limit").as<int64_t>();
+         my->age_limit = options.at("watch-age-limit").as<int64_t>();
 
 
          my->chain_plug = app().find_plugin<chain_plugin>();
@@ -201,7 +238,7 @@ namespace eosio {
          my->accepted_block_conn.emplace(chain.accepted_block.connect(
             [&](const block_state_ptr& b_state) {
                my->on_accepted_block(b_state);
-            }));
+         }));
 
          my->applied_tx_conn.emplace(chain.applied_transaction.connect(
             [&](const transaction_trace_ptr& tt) {
