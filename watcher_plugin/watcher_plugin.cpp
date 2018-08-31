@@ -145,30 +145,26 @@ namespace eosio {
          fc::time_point btime = block_state->block->timestamp;
          if( age_limit == -1 || (fc::time_point::now() - btime < fc::seconds(age_limit)) ) {
             message msg;
+            transaction_id_type tx_id;
 
-            //~ ilog("Looping over all trx objects in block_state->trxs");
-            for( const auto& tx : block_state->trxs ) {
-               //~ ilog("===> block_state->trxs | id: ${u}", ("u",tx->id));
-               auto tx_id = tx->id;
-               //~ ilog("action_queue.size: ${u}", ("u",action_queue.size()));
-               if( action_queue.count(tx_id) ) {
-                  build_message(msg, tx_id);
-               }
-            }
-            //~ ilog("Done processing block_state->trxs");
-
-            //~ Now process the inline transactions from the block
+            //~ Process transactions from `block_state->block->transactions` because it includes all transactions including deferred ones
             //~ ilog("Looping over all transaction objects in block_state->block->transactions");
             for( const auto& trx : block_state->block->transactions ) {
-               if (trx.trx.contains<transaction_id_type>()) {
-                  //~ ilog("trx.trx: ${u}", ("u",trx.trx));
-                  //~ ilog("===> block_state->block->transactions->trx->trx->id: ${u}", ("u",trx.trx.get<transaction_id_type>()));
-                  auto tx_id = trx.trx.get<transaction_id_type>();
-                  //~ ilog("action_queue.size: ${u}", ("u",action_queue.size()));
-                  if( action_queue.count(tx_id) ) {
-                     build_message(msg, tx_id);
-                  }
-               }
+              if( trx.trx.contains<transaction_id_type>() ) {
+                //~ For deferred transactions the transaction id is easily accessible
+                //~ ilog("===> block_state->block->transactions->trx ID: ${u}", ("u",trx.trx.get<transaction_id_type>()));
+                tx_id = trx.trx.get<transaction_id_type>();
+              }
+              else {
+                //~ For non-deferred transactions we have to access the txid from within the packed transaction. The `trx` structure and `id()` getter method are defined in `transaction.hpp`
+                //~ ilog("===> block_state->block->transactions->trx ID: ${u}", ("u",trx.trx.get<packed_transaction>().id()));
+                tx_id = trx.trx.get<packed_transaction>().id();
+              }
+
+              //~ ilog("action_queue.size: ${u}", ("u",action_queue.size()));
+              if( action_queue.count(tx_id) ) {
+                 build_message(msg, tx_id);
+              }
             }
 
             //~ ilog("Done processing block_state->block->transactions");
