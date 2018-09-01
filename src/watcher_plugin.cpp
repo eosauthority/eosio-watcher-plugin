@@ -112,16 +112,17 @@ namespace eosio {
                                               max_deserialization_time);
       }
 
-      // Returns act_sequence incremented by the number of actions added
+      // Returns act_sequence incremented by the number of actions checked.
+      // So 1 (this action) + all the inline actions
       action_seq_t on_action_trace(const action_trace& act, const transaction_id_type& tx_id,
                                    action_seq_t act_sequence) {
          //~ ilog("on_action_trace - tx id: ${u}", ("u",tx_id));
          if( filter(act)) {
             action_queue.insert(std::make_pair(tx_id, sequenced_action(act.act, act_sequence,
                                                                        act.receipt.receiver)));
-            act_sequence++;
             //~ ilog("Added to action_queue: ${u}", ("u",act.act));
          }
+         act_sequence++;
 
          for( const auto& iline : act.inline_traces ) {
             //~ ilog("Processing inline_trace: ${u}", ("u",iline));

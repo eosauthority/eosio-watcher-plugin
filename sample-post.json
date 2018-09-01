@@ -2,6 +2,10 @@
   "actions": [{
     "tx_id": "0f739ccba098d7a556280c2797f7ec4d8a41250d643c9a6c2c5685f4544bc9a1",
     "account": "eosio.token",
+    "seq_num": 1,
+    "receiver": "acca",
+    "block_time": "2018-09-01T10:36:57.500",
+    "block_num": 7734,
     "name": "transfer",
     "authorization": [{
         "actor": "eosio",
@@ -18,6 +22,10 @@
     "tx_id": "0f739ccba098d7a556280c2797f7ec4d8a41250d643c9a6c2c5685f4544bc9a2",
     "account": "eosio.token",
     "name": "transfer",
+    "seq_num": 0,
+    "receiver": "accb",
+    "block_time": "2018-09-01T10:36:57.500",
+    "block_num": 7734,
     "authorization": [{
         "actor": "eosio",
         "permission": "active"
