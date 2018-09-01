@@ -34,7 +34,8 @@ namespace eosio {
       typedef uint32_t action_seq_t;
 
       struct sequenced_action : public action {
-         sequenced_action(const action& act, action_seq_t seq) : action(act), seq_num(seq) {}
+         sequenced_action(const action& act, action_seq_t seq, account_name receiver)
+            : action(act), seq_num(seq), receiver(receiver) {}
 
          action_seq_t seq_num;
          account_name receiver;
@@ -45,13 +46,14 @@ namespace eosio {
                       const variant& action_data, fc::time_point block_time,
                       uint32_t block_num)
             : tx_id(tx_id), account(act.account), name(act.name), seq_num(act.seq_num),
-              block_time(block_time), block_num(block_num),
+              receiver(act.receiver), block_time(block_time), block_num(block_num),
               authorization(act.authorization), action_data(action_data) {}
 
          transaction_id_type      tx_id;
          account_name             account;
          action_name              name;
          action_seq_t             seq_num;      // sequence number of action in tx
+         account_name             receiver;
          fc::time_point           block_time;
          uint32_t                 block_num;
 
@@ -115,7 +117,8 @@ namespace eosio {
                                    action_seq_t act_sequence) {
          //~ ilog("on_action_trace - tx id: ${u}", ("u",tx_id));
          if( filter(act)) {
-            action_queue.insert(std::make_pair(tx_id, sequenced_action(act.act, act_sequence)));
+            action_queue.insert(std::make_pair(tx_id, sequenced_action(act.act, act_sequence,
+                                                                       act.receipt.receiver)));
             act_sequence++;
             //~ ilog("Added to action_queue: ${u}", ("u",act.act));
          }
@@ -284,5 +287,5 @@ namespace eosio {
 }
 
 FC_REFLECT(eosio::watcher_plugin_impl::action_notif, (tx_id)(account)(name)
-   (seq_num)(block_time)(block_num)(authorization)(action_data))
+   (seq_num)(receiver)(block_time)(block_num)(authorization)(action_data))
 FC_REFLECT(eosio::watcher_plugin_impl::message, (actions))
