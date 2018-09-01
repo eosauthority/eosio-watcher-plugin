@@ -6,3 +6,5 @@ add_library( watcher_plugin
 
 target_link_libraries( watcher_plugin chain_plugin eosio_chain appbase fc )
 target_include_directories( watcher_plugin PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" )
+
+eosio_additional_plugin(watcher_plugin)
