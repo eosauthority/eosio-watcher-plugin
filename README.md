@@ -31,17 +31,22 @@ You need to statically link this plugin with nodeos. To do that, pass the follow
 -DEOSIO_ADDITIONAL_PLUGINS=<path-to-eosio-watchar-plugin>
 ```
 ### EOSIO v1.1.0 and up
-1. Copy watcher_plugin folder to `<eosio-source-dir>/plugins/` You should now have `<eosio-source-dir>/plugins/watcher_plugin`
-2. Add the following line to `<eosio-source-dir>/plugins/CMakeLists.txt` with other `add_subdirectory` items
+1. Remove or comment out this line in CMakeLists.txt:
+```
+eosio_additional_plugin(watcher_plugin)
+```
+
+2. Copy this repo to `<eosio-source-dir>/plugins/` You should now have `<eosio-source-dir>/plugins/watcher-plugin`
+3. Add the following line to `<eosio-source-dir>/plugins/CMakeLists.txt` with other `add_subdirectory` items
   ```
-  add_subdirectory(watcher_plugin)
+  add_subdirectory(watcher-plugin)
   ```
 
-3. Add the following line to the bottom of `<eosio-source-dir>/programs/nodeos/CMakeLists.txt`
+4. Add the following line to the bottom of `<eosio-source-dir>/programs/nodeos/CMakeLists.txt`
   ```
   target_link_libraries( nodeos PRIVATE -Wl,${whole_archive_flag} watcher_plugin -Wl,${no_whole_archive_flag})
   ```
-4. Build and install nodeos as usual. You could even just `cd <eosio-source-dir>/build` and then `sudo make install`
+5. Build and install nodeos as usual. You could even just `cd <eosio-source-dir>/build` and then `sudo make install`
 
 # How to setup on your nodeos
 
