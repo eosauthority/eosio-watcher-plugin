@@ -1,6 +1,6 @@
 file(GLOB HEADERS "include/eosio/watcher_plugin/*.hpp")
 add_library( watcher_plugin
-             watcher_plugin.cpp
+             src/watcher_plugin.cpp
              ${HEADERS} include/eosio/watcher_plugin/watcher_plugin.hpp
                         include/eosio/watcher_plugin/http_async_client.hpp)
 
