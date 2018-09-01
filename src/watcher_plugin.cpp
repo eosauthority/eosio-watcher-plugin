@@ -26,23 +26,39 @@ namespace eosio {
 
    class watcher_plugin_impl {
    public:
-      typedef std::unordered_multimap<transaction_id_type, action> action_queue_t;
 
       static const int64_t          default_age_limit = 60;
       static const fc::microseconds http_timeout;
       static const fc::microseconds max_deserialization_time;
 
+      typedef uint32_t action_seq_t;
+
+      struct sequenced_action : public action {
+         sequenced_action(const action& act, action_seq_t seq) : action(act), seq_num(seq) {}
+
+         action_seq_t seq_num;
+         account_name receiver;
+      };
+
       struct action_notif {
-         action_notif(const action& act, transaction_id_type tx_id, const variant& action_data)
-            : tx_id(tx_id), account(act.account), name(act.name), authorization(act.authorization),
-              action_data(action_data) {}
+         action_notif(const sequenced_action& act, transaction_id_type tx_id,
+                      const variant& action_data, fc::time_point block_time,
+                      uint32_t block_num)
+            : tx_id(tx_id), account(act.account), name(act.name), seq_num(act.seq_num),
+              block_time(block_time), block_num(block_num),
+              authorization(act.authorization), action_data(action_data) {}
 
          transaction_id_type      tx_id;
          account_name             account;
          action_name              name;
+         action_seq_t             seq_num;      // sequence number of action in tx
+         fc::time_point           block_time;
+         uint32_t                 block_num;
+
          vector<permission_level> authorization;
          fc::variant              action_data;
       };
+
 
       struct message {
          std::vector<action_notif> actions;
@@ -61,6 +77,8 @@ namespace eosio {
          }
       };
 
+
+      typedef std::unordered_multimap<transaction_id_type, sequenced_action> action_queue_t;
 
       chain_plugin* chain_plug                                   = nullptr;
       fc::optional<boost::signals2::scoped_connection> accepted_block_conn;
@@ -92,17 +110,22 @@ namespace eosio {
                                               max_deserialization_time);
       }
 
-      void on_action_trace(const action_trace& act, const transaction_id_type& tx_id) {
+      // Returns act_sequence incremented by the number of actions added
+      action_seq_t on_action_trace(const action_trace& act, const transaction_id_type& tx_id,
+                                   action_seq_t act_sequence) {
          //~ ilog("on_action_trace - tx id: ${u}", ("u",tx_id));
          if( filter(act)) {
-            action_queue.insert(std::make_pair(tx_id, act.act));
+            action_queue.insert(std::make_pair(tx_id, sequenced_action(act.act, act_sequence)));
+            act_sequence++;
             //~ ilog("Added to action_queue: ${u}", ("u",act.act));
          }
 
          for( const auto& iline : act.inline_traces ) {
             //~ ilog("Processing inline_trace: ${u}", ("u",iline));
-            on_action_trace(iline, tx_id);
+            act_sequence = on_action_trace(iline, tx_id, act_sequence);
          }
+
+         return act_sequence;
       }
 
       void on_applied_tx(const transaction_trace_ptr& trace) {
@@ -111,13 +134,15 @@ namespace eosio {
          //~ ilog("trace->id: ${u}",("u",trace->id));
          //~ ilog("action_queue.count(id): ${u}",("u",action_queue.count(id)));
          if( !action_queue.count(id)) {
+            action_seq_t seq = 0;
             for( auto& at : trace->action_traces ) {
-               on_action_trace(at, id);
+               seq = on_action_trace(at, id, seq);
             }
          }
       }
 
-      void build_message(message& msg, const transaction_id_type& tx_id) {
+      void build_message(message& msg, const block_state_ptr& block,
+                         const transaction_id_type& tx_id) {
          //~ ilog("inside build_message - transaction id: ${u}", ("u",tx_id));
          auto range = action_queue.equal_range(tx_id);
          for( auto& it = range.first; it != range.second; it++ ) {
@@ -125,7 +150,8 @@ namespace eosio {
             //~ ilog("iterator it->first: ${u}", ("u",it->first));
             //~ ilog("iterator it->second: ${u}", ("u",it->second));
             auto         act_data = deserialize_action_data(it->second);
-            action_notif notif(it->second, tx_id, std::forward<fc::variant>(act_data));
+            action_notif notif(it->second, tx_id, std::forward<fc::variant>(act_data),
+                               block->block->timestamp, block->block->block_num());
 
             msg.actions.push_back(notif);
          }
@@ -162,7 +188,7 @@ namespace eosio {
 
                //~ ilog("action_queue.size: ${u}", ("u",action_queue.size()));
                if( action_queue.count(tx_id)) {
-                  build_message(msg, tx_id);
+                  build_message(msg, block_state, tx_id);
                }
             }
 
@@ -257,6 +283,6 @@ namespace eosio {
 
 }
 
-FC_REFLECT(eosio::watcher_plugin_impl::action_notif, (tx_id)(account)(name)(authorization)
-   (action_data))
+FC_REFLECT(eosio::watcher_plugin_impl::action_notif, (tx_id)(account)(name)
+   (seq_num)(block_time)(block_num)(authorization)(action_data))
 FC_REFLECT(eosio::watcher_plugin_impl::message, (actions))
