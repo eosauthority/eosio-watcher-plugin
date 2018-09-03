@@ -5,7 +5,7 @@ The HTTP POST is called as soon as the action is seen on the chain!
 
 # Watcher plugin features
 ## Filter and get notifications for actions on any account
-You can either get notifications for all actions on a specific contract account, or any specific actions. You get notifications in a form of http POST call to the url you specify. 
+You can either get notifications for all actions on a account, or any specific actions. You get notifications in a form of http POST call to the url you specify. 
 
 ## Age limit for actions
 Usually you don't want to receive notifications for actions which happened months ago, just because your nodeos is resyncing. To prevent this you can specify age limit for blocks, which are filtered for actions you want to receive. This is by default set to 1 minute, but is configurable.
@@ -25,17 +25,28 @@ To make sure no action is missed, even when a connection to the receiver is lost
 - Works on any EOSIO node that runs v1.1.0 and up.
 
 ## Building the plugin [Install on your nodeos server]
-1. Copy watcher_plugin folder to `<eosio-source-dir>/plugins/` You should now have `<eosio-source-dir>/plugins/watcher_plugin`
-2. Add the following line to `<eosio-source-dir>/plugins/CMakeLists.txt` with other `add_subdirectory` items
+### EOSIO v1.2.0 and up
+You need to statically link this plugin with nodeos. To do that, pass the following flag to cmake command when building eosio:
+```
+-DEOSIO_ADDITIONAL_PLUGINS=<path-to-eosio-watchar-plugin>
+```
+### EOSIO v1.1.0 and up
+1. Remove or comment out this line in CMakeLists.txt:
+```
+eosio_additional_plugin(watcher_plugin)
+```
+
+2. Copy this repo to `<eosio-source-dir>/plugins/` You should now have `<eosio-source-dir>/plugins/watcher-plugin`
+3. Add the following line to `<eosio-source-dir>/plugins/CMakeLists.txt` with other `add_subdirectory` items
   ```
-  add_subdirectory(watcher_plugin)
+  add_subdirectory(watcher-plugin)
   ```
 
-3. Add the following line to the bottom of `<eosio-source-dir>/programs/nodeos/CMakeLists.txt`
+4. Add the following line to the bottom of `<eosio-source-dir>/programs/nodeos/CMakeLists.txt`
   ```
   target_link_libraries( nodeos PRIVATE -Wl,${whole_archive_flag} watcher_plugin -Wl,${no_whole_archive_flag})
   ```
-4. Build and install nodeos as usual. You could even just `cd <eosio-source-dir>/build` and then `sudo make install`
+5. Build and install nodeos as usual. You could even just `cd <eosio-source-dir>/build` and then `sudo make install`
 
 # How to setup on your nodeos
 
