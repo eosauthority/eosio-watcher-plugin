@@ -28,7 +28,7 @@ To make sure no action is missed, even when a connection to the receiver is lost
 ### EOSIO v1.2.0 and up
 You need to statically link this plugin with nodeos. To do that, pass the following flag to cmake command when building eosio:
 ```
--DEOSIO_ADDITIONAL_PLUGINS=<path-to-eosio-watchar-plugin>
+-DEOSIO_ADDITIONAL_PLUGINS=<path-to-eosio-watcher-plugin>
 ```
 ### EOSIO v1.1.0 and up
 1. Remove or comment out this line in CMakeLists.txt:
