@@ -193,6 +193,14 @@ namespace eosio {
                //~ ilog("action_queue.size: ${u}", ("u",action_queue.size()));
                if( action_queue.count(tx_id)) {
                   build_message(msg, block_state, tx_id);
+                  
+                  // Remove this matching tx from the action queue.
+                  // If a transaction comes in a future block, this method allows us to preseve the
+                  // remaining action queue between blocks to pickup a transaction at a later time when
+                  // it is eventually included in a block, in comparison to flushing the remaining action
+                  // queue and potentially leaving some transactions never to be alerted on.
+                  auto itr = action_queue.find(tx_id);
+                  action_queue.erase(itr);
                }
             }
 
@@ -203,8 +211,6 @@ namespace eosio {
                send_message(msg);
             }
          }
-         // TODO: Leave unsent actions until they are expired or are included in future blocks?
-         action_queue.clear();
       }
    };
 
