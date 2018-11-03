@@ -7,6 +7,8 @@ The HTTP POST is called as soon as the action is seen on the chain!
 ## Filter and get notifications for actions on any account
 You can either get notifications for all actions on a account, or any specific actions. You get notifications in a form of http POST call to the url you specify. 
 
+**NOTE:** in case of forks plugin can end up sending notifications for same transaction twice. That's because notifications are sent as soon as block is accepted (so there is no guarantee block is not on a fork). Receiver of notifications should handle the duplicate notification appropriately.
+
 ## Age limit for actions
 Usually you don't want to receive notifications for actions which happened months ago, just because your nodeos is resyncing. To prevent this you can specify age limit for blocks, which are filtered for actions you want to receive. This is by default set to 1 minute, but is configurable.
 
