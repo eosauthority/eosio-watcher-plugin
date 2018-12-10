@@ -38,10 +38,10 @@ You need to statically link this plugin with nodeos. To do that, pass the follow
 eosio_additional_plugin(watcher_plugin)
 ```
 
-2. Copy this repo to `<eosio-source-dir>/plugins/` You should now have `<eosio-source-dir>/plugins/watcher-plugin`
+2. Copy this repo to `<eosio-source-dir>/plugins/` You should now have `<eosio-source-dir>/plugins/watcher_plugin`
 3. Add the following line to `<eosio-source-dir>/plugins/CMakeLists.txt` with other `add_subdirectory` items
   ```
-  add_subdirectory(watcher-plugin)
+  add_subdirectory(watcher_plugin)
   ```
 
 4. Add the following line to the bottom of `<eosio-source-dir>/programs/nodeos/CMakeLists.txt`
