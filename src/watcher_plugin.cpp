@@ -82,9 +82,9 @@ namespace eosio {
 
       typedef std::unordered_multimap<transaction_id_type, sequenced_action> action_queue_t;
 
-      chain_plugin* chain_plug                                   = nullptr;
-      fc::optional<boost::signals2::scoped_connection> accepted_block_conn;
-      fc::optional<boost::signals2::scoped_connection> applied_tx_conn;
+      chain_plugin* chain_plug;
+      fc::optional<boost::signals2::scoped_connection> accepted_block_connection;
+      fc::optional<boost::signals2::scoped_connection> applied_transaction_connection;
       std::set<watcher_plugin_impl::filter_entry>      filter_on;
       http_async_client                                httpc;
       fc::url                                          receiver_url;
@@ -269,16 +269,17 @@ namespace eosio {
 
          my->chain_plug = app().find_plugin<chain_plugin>();
          auto& chain = my->chain_plug->chain();
-         my->accepted_block_conn.emplace(chain.accepted_block.connect(
-            [&](const block_state_ptr& b_state) {
+         
+         my->accepted_block_connection.emplace(
+            chain.accepted_block.connect([&](const block_state_ptr& b_state) {
                my->on_accepted_block(b_state);
             }));
 
-         my->applied_tx_conn.emplace(chain.applied_transaction.connect(
-            [&](const transaction_trace_ptr& tt) {
-               my->on_applied_tx(tt);
-            }
-         ));
+         my->applied_transaction_connection.emplace(
+            chain.applied_transaction.connect([&](std::tuple<const transaction_trace_ptr&, const signed_transaction&> t) {
+               my->on_applied_tx(std::get<0>(t));
+            }));
+         
       } FC_LOG_AND_RETHROW()
    }
 
@@ -288,8 +289,8 @@ namespace eosio {
    }
 
    void watcher_plugin::plugin_shutdown() {
-      my->applied_tx_conn.reset();
-      my->accepted_block_conn.reset();
+      my->applied_transaction_connection.reset();
+      my->accepted_block_connection.reset();
       my->httpc.stop();
    }
 
