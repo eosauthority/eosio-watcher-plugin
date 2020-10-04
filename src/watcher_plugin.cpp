@@ -93,9 +93,9 @@ namespace eosio {
 
 
       bool filter(const action_trace& act) {
-         if( filter_on.find({act.receiver, act.act.name}) != filter_on.end())
+         if( filter_on.find({act.receipt.receiver, act.act.name}) != filter_on.end())
             return true;
-         else if( filter_on.find({act.receiver, 0}) != filter_on.end())
+         else if( filter_on.find({act.receipt.receiver, 0}) != filter_on.end())
             return true;
          return false;
       }
@@ -119,17 +119,15 @@ namespace eosio {
          //~ ilog("on_action_trace - tx id: ${u}", ("u",tx_id));
          if( filter(act)) {
             action_queue.insert(std::make_pair(tx_id, sequenced_action(act.act, act_sequence,
-                                                                       act.receiver)));
+                                                                       act.receipt.receiver)));
             //~ ilog("Added to action_queue: ${u}", ("u",act.act));
          }
          act_sequence++;
 
-         /*
          for( const auto& iline : act.inline_traces ) {
             //~ ilog("Processing inline_trace: ${u}", ("u",iline));
             act_sequence = on_action_trace(iline, tx_id, act_sequence);
          }
-         */
 
          return act_sequence;
       }
